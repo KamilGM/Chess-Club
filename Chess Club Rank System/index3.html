@@ -1,1 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Club Rank System</title>
+    <link rel="stylesheet" href="style3.css">
+</head>
+<body>
+    <div class="background-glow"></div>
 
+    <header class="site-header">
+        <div>
+            <p class="eyebrow">CHESS CLUB</p>
+            <h1>Rank System</h1>
+            <p class="subtitle">Chess Club Player Rankings</p>
+        </div>
+
+        <button id="changeLeaderboardBtn" class="admin-corner-btn">
+            Change Leaderboard
+        </button>
+    </header>
+
+    <main class="container">
+        <section class="leaderboard-card">
+            <div class="card-header">
+                <div>
+                    <h2>Leaderboard</h2>
+                    <p>Players ranked by Elo rating</p>
+                </div>
+                <div id="playerCount" class="player-count">0 Players</div>
+            </div>
+
+            <div class="leaderboard-head">
+                <span>Rank</span>
+                <span>Player</span>
+                <span>Elo</span>
+                <span id="controlsHeading">Controls</span>
+            </div>
+
+            <div id="leaderboard"></div>
+        </section>
+
+        <section id="adminPanel" class="admin-panel hidden">
+            <div class="admin-header">
+                <div>
+                    <p class="eyebrow">ADMIN MODE</p>
+                    <h2>Change Leaderboard</h2>
+                    <p>Edit players and ratings below.</p>
+                </div>
+
+                <button id="exitAdminBtn" class="secondary-btn">
+                    Exit Editing
+                </button>
+            </div>
+
+            <div class="admin-actions">
+                <button id="addPlayerBtn" class="primary-btn">
+                    + Add Player
+                </button>
+
+                <button id="resetBtn" class="danger-btn">
+                    Reset Defaults
+                </button>
+            </div>
+
+            <div id="adminPlayers"></div>
+        </section>
+
+        <section class="info-card">
+            <h2>About the Rankings</h2>
+            <p>
+                Players are automatically ranked from highest Elo to lowest.
+                Rating changes are saved on this device.
+            </p>
+        </section>
+
+        <button id="backBtn" class="back-btn">
+            ← Back to Main Website
+        </button>
+    </main>
+
+    <div id="codeModal" class="modal hidden">
+        <div class="modal-box">
+            <button id="closeModalBtn" class="close-btn">&times;</button>
+
+            <p class="eyebrow">ADMIN ACCESS</p>
+            <h2>Enter Access Code</h2>
+            <p class="modal-description">
+                Enter the 6-digit code to edit the leaderboard.
+            </p>
+
+            <input
+                id="accessCodeInput"
+                type="password"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="off"
+                placeholder="••••••"
+            >
+
+            <p id="codeError" class="error-message"></p>
+
+            <button id="unlockBtn" class="primary-btn full-btn">
+                Unlock
+            </button>
+        </div>
+    </div>
+
+    <script src="script3.js"></script>
+</body>
+</html>
