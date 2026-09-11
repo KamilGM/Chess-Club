@@ -1,2 +1,2 @@
 # Chess-CLock
-a chess clock to use on all platforms
+a small website for my chess club made by yours truly, me, Kamil GM
