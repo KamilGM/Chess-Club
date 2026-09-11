@@ -1,112 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Club Rank System</title>
-    <link rel="stylesheet" href="style3.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Club Rank System</title>
+<link rel="stylesheet" href="style3.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="background-glow"></div>
 
-    <header class="site-header">
-        <div>
-            <p class="eyebrow">CHESS CLUB</p>
-            <h1>Rank System</h1>
-            <p class="subtitle">Chess Club Player Rankings</p>
-        </div>
+<div class="page-background"></div>
 
-        <button id="changeLeaderboardBtn" class="admin-corner-btn">
-            Change Leaderboard
-        </button>
-    </header>
+<main class="container">
 
-    <main class="container">
-        <section class="leaderboard-card">
-            <div class="card-header">
-                <div>
-                    <h2>Leaderboard</h2>
-                    <p>Players ranked by Elo rating</p>
-                </div>
-                <div id="playerCount" class="player-count">0 Players</div>
-            </div>
+<header class="site-header">
+<div class="chess-icon">♟</div>
+<div>
+<h1>Chess Club</h1>
+<p>Club Rank System</p>
+</div>
+</header>
 
-            <div class="leaderboard-head">
-                <span>Rank</span>
-                <span>Player</span>
-                <span>Elo</span>
-                <span id="controlsHeading">Controls</span>
-            </div>
+<section class="leaderboard-card">
 
-            <div id="leaderboard"></div>
-        </section>
+<div class="leaderboard-heading">
+<div>
+<h2>Leaderboard</h2>
+<p id="playerCount">Loading players...</p>
+</div>
 
-        <section id="adminPanel" class="admin-panel hidden">
-            <div class="admin-header">
-                <div>
-                    <p class="eyebrow">ADMIN MODE</p>
-                    <h2>Change Leaderboard</h2>
-                    <p>Edit players and ratings below.</p>
-                </div>
+<div class="header-buttons">
+<button id="changeLeaderboardButton" class="secondary-button">Change Leaderboard</button>
+<button id="backButton" class="secondary-button">Back to Main Website</button>
+</div>
+</div>
 
-                <button id="exitAdminBtn" class="secondary-btn">
-                    Exit Editing
-                </button>
-            </div>
+<div id="statusMessage" class="status-message hidden"></div>
 
-            <div class="admin-actions">
-                <button id="addPlayerBtn" class="primary-btn">
-                    + Add Player
-                </button>
+<div id="leaderboard" class="leaderboard">
+<div class="loading">
+<div class="spinner"></div>
+<span>Loading leaderboard...</span>
+</div>
+</div>
 
-                <button id="resetBtn" class="danger-btn">
-                    Reset Defaults
-                </button>
-            </div>
+</section>
 
-            <div id="adminPlayers"></div>
-        </section>
+<section id="loginPanel" class="panel hidden">
 
-        <section class="info-card">
-            <h2>About the Rankings</h2>
-            <p>
-                Players are automatically ranked from highest Elo to lowest.
-                Rating changes are saved on this device.
-            </p>
-        </section>
+<div class="panel-header">
+<div>
+<h2>Authorised Access</h2>
+<p>Enter the administrator login details.</p>
+</div>
+</div>
 
-        <button id="backBtn" class="back-btn">
-            ← Back to Main Website
-        </button>
-    </main>
+<form id="loginForm">
 
-    <div id="codeModal" class="modal hidden">
-        <div class="modal-box">
-            <button id="closeModalBtn" class="close-btn">&times;</button>
+<label for="adminEmail">Admin email</label>
+<input id="adminEmail" type="email" autocomplete="username" required placeholder="Enter admin email">
 
-            <p class="eyebrow">ADMIN ACCESS</p>
-            <h2>Enter Access Code</h2>
-            <p class="modal-description">
-                Enter the 6-digit code to edit the leaderboard.
-            </p>
+<label for="adminPin">PIN</label>
+<input id="adminPin" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="Enter PIN">
 
-            <input
-                id="accessCodeInput"
-                type="password"
-                inputmode="numeric"
-                maxlength="6"
-                autocomplete="off"
-                placeholder="••••••"
-            >
+<div class="form-buttons">
+<button type="submit" class="primary-button">Enter Editing Mode</button>
+<button type="button" id="cancelLoginButton" class="secondary-button">Cancel</button>
+</div>
 
-            <p id="codeError" class="error-message"></p>
+<p id="loginMessage" class="form-message"></p>
 
-            <button id="unlockBtn" class="primary-btn full-btn">
-                Unlock
-            </button>
-        </div>
-    </div>
+</form>
 
-    <script src="script3.js"></script>
+</section>
+
+<section id="editingPanel" class="panel hidden">
+
+<div class="panel-header editing-header">
+<div>
+<h2>Change Leaderboard</h2>
+<p>Move, rename, add, or remove players.</p>
+</div>
+
+<button id="exitEditingButton" class="secondary-button">Exit Editing</button>
+</div>
+
+<div id="editingPlayers" class="editing-players"></div>
+
+<div class="management-section">
+
+<h3>Add Player</h3>
+
+<form id="addPlayerForm" class="add-player-form">
+<input id="newPlayerName" type="text" maxlength="50" required placeholder="Player name">
+<button type="submit" class="primary-button">Add Player</button>
+</form>
+
+</div>
+
+<div class="save-section">
+<button id="saveChangesButton" class="save-button">Save Changes</button>
+<p id="saveMessage" class="form-message"></p>
+</div>
+
+</section>
+
+<footer>
+<p>Chess Club Rank System</p>
+</footer>
+
+</main>
+
+<script src="script3.js"></script>
+
 </body>
 </html>
