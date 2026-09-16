@@ -1,123 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chess Club Rank System</title>
-<link rel="stylesheet" href="style3.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Club Matchmaking</title>
+    <link rel="stylesheet" href="style3.css">
 </head>
 <body>
 
-<div class="page-background"></div>
+    <header class="topbar">
+        <div>
+            <h1>♟ Chess Club</h1>
+            <p>Random Matchmaking</p>
+        </div>
 
-<main class="container">
+        <button id="adminButton" class="admin-button">Admin</button>
+    </header>
 
-<header class="site-header">
-<div class="chess-icon">♟</div>
-<div>
-<h1>Chess Club</h1>
-<p>Club Rank System</p>
-</div>
-</header>
+    <main>
 
-<section class="leaderboard-card">
+        <section class="matchmaking-section">
+            <div class="section-heading">
+                <h2>Find an Opponent</h2>
+                <p>Choose a player and randomly find a suitable opponent.</p>
+            </div>
 
-<div class="leaderboard-heading">
-<div>
-<h2>Leaderboard</h2>
-<p id="playerCount">Loading players...</p>
-</div>
+            <div class="player-selector">
+                <label for="playerSelect">Player</label>
+                <select id="playerSelect">
+                    <option value="">Select a player...</option>
+                </select>
+            </div>
 
-<div class="header-buttons">
-<button id="changeLeaderboardButton" class="secondary-button">Change Leaderboard</button>
-<button id="backButton" class="secondary-button">Back to Main Website</button>
-</div>
-</div>
+            <div class="match-area">
 
-<div id="statusMessage" class="status-message hidden"></div>
+                <div class="player-card" id="playerCard">
+                    <div class="card-label">PLAYER</div>
+                    <div class="player-name" id="playerName">Select a player</div>
+                    <div class="rank-badge" id="playerRank">—</div>
+                </div>
 
-<div id="leaderboard" class="leaderboard">
-<div class="loading">
-<div class="spinner"></div>
-<span>Loading leaderboard...</span>
-</div>
-</div>
+                <div class="vs">VS</div>
 
-</section>
+                <div class="player-card opponent-card" id="opponentCard">
+                    <div class="card-label">OPPONENT</div>
+                    <div class="player-name" id="opponentName">Waiting...</div>
+                    <div class="rank-badge" id="opponentRank">—</div>
+                </div>
 
-<section id="loginPanel" class="panel hidden">
+            </div>
 
-<div class="panel-header">
-<div>
-<h2>Authorised Access</h2>
-<p>Enter the administrator login details.</p>
-</div>
-</div>
+            <button id="randomizeButton" class="randomize-button" disabled>
+                🎲 Find Random Opponent
+            </button>
 
-<form id="loginForm">
+            <div id="statusMessage" class="status-message"></div>
+        </section>
 
-<label for="adminEmail">Admin email</label>
-<input id="adminEmail" type="email" autocomplete="username" required placeholder="Enter admin email">
+        <section class="rank-guide">
+            <h2>Matchmaking Ranks</h2>
 
-<label for="adminPin">PIN</label>
-<input id="adminPin" type="password" inputmode="numeric" autocomplete="current-password" required placeholder="Enter PIN">
+            <div class="rank-list">
+                <div class="rank-item great">
+                    <span>🟢</span>
+                    <strong>Great</strong>
+                </div>
 
-<div class="form-buttons">
-<button type="submit" class="primary-button">Enter Editing Mode</button>
-<button type="button" id="cancelLoginButton" class="secondary-button">Cancel</button>
-</div>
+                <div class="rank-item good">
+                    <span>🟩</span>
+                    <strong>Good</strong>
+                </div>
 
-<p id="loginMessage" class="form-message"></p>
+                <div class="rank-item mid">
+                    <span>🟨</span>
+                    <strong>Mid</strong>
+                </div>
 
-</form>
+                <div class="rank-item alright">
+                    <span>🟧</span>
+                    <strong>Alright</strong>
+                </div>
 
-</section>
+                <div class="rank-item eh">
+                    <span>🔴</span>
+                    <strong>Eh</strong>
+                </div>
+            </div>
+        </section>
 
-<section id="editingPanel" class="panel hidden">
+        <section id="adminPanel" class="admin-panel hidden">
 
-<div class="panel-header editing-header">
-<div>
-<h2>Change Leaderboard</h2>
-<p>Move, rename, add, or remove players.</p>
-</div>
+            <div class="admin-header">
+                <div>
+                    <h2>Administrator Area</h2>
+                    <p>Manually manage matchmaking ranks.</p>
+                </div>
 
-<button id="exitEditingButton" class="secondary-button">Exit Editing</button>
-</div>
+                <button id="closeAdminButton" class="close-admin-button">
+                    Close
+                </button>
+            </div>
 
-<div id="editingPlayers" class="editing-players"></div>
+            <div id="adminLoginArea">
+                <label for="adminCode">Administrator Code</label>
 
-<div class="management-section">
+                <div class="admin-login-row">
+                    <input
+                        type="password"
+                        id="adminCode"
+                        maxlength="6"
+                        inputmode="numeric"
+                        placeholder="6-digit code"
+                    >
 
-<h3>Add Player</h3>
+                    <button id="adminLoginButton">
+                        Enter
+                    </button>
+                </div>
 
-<form id="addPlayerForm" class="add-player-form">
-<input id="newPlayerName" type="text" maxlength="50" required placeholder="Player name">
-<button type="submit" class="primary-button">Add Player</button>
-</form>
+                <div id="adminLoginMessage" class="admin-message"></div>
+            </div>
 
-</div>
+            <div id="adminControls" class="hidden">
 
-<div class="save-section">
-<button id="saveChangesButton" class="save-button">Save Changes</button>
-<p id="saveMessage" class="form-message"></p>
-</div>
+                <div class="admin-info">
+                    <strong>Rank Management</strong>
+                    <span>↑ promotes one rank · ↓ demotes one rank</span>
+                </div>
 
-</section>
+                <div id="playerManagement" class="player-management">
+                </div>
 
-<footer>
-<p>Chess Club Rank System</p>
-</footer>
+            </div>
 
-</main>
+        </section>
 
-<script src="script3.js"></script>
+    </main>
 
-<script>
-document.getElementById('backButton').addEventListener('click', () => {
-window.location.href = '../index.html';
-});
-</script>
+    <footer>
+        <p>Chess Club Matchmaking</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script3.js"></script>
 
 </body>
 </html>
