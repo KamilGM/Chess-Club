@@ -3,7 +3,7 @@
 // ============================================================
 
 const SUPABASE_URL = "https://yancliyxlacdvhuirxns.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_ANON_KEY = "sb_publishable_XnTk76AkxkGQl8UYDgRlgA_YniM5cWq";
 
 const { createClient } = supabase;
 
