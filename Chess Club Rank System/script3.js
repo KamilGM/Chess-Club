@@ -1,9 +1,8 @@
 // ============================================================
 // SUPABASE CONFIGURATION
-// Replace these two values with your matchmaking Supabase project
 // ============================================================
 
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_URL = "https://yancliyxlacdvhuirxns.supabase.co";
 const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
 const { createClient } = supabase;
@@ -65,6 +64,7 @@ const playerManagement = document.getElementById("playerManagement");
 
 let players = [];
 let isAdmin = false;
+let adminSessionCode = "";
 
 
 // ============================================================
@@ -176,7 +176,9 @@ function getSelectedPlayer() {
         return null;
     }
 
-    return players.find(player => String(player.id) === String(id)) || null;
+    return players.find(
+        player => String(player.id) === String(id)
+    ) || null;
 }
 
 
@@ -259,8 +261,6 @@ function getGreatPreferences(availablePlayers) {
 // GOOD
 // 50% Great
 // 50% Mid
-//
-// If the selected side is unavailable, use the other side.
 // ============================================================
 
 function getGoodPreferences(availablePlayers) {
@@ -300,8 +300,6 @@ function getGoodPreferences(availablePlayers) {
 // MID
 // 50% Good
 // 50% Alright
-//
-// If the selected side is unavailable, use the other side.
 // ============================================================
 
 function getMidPreferences(availablePlayers) {
@@ -341,8 +339,6 @@ function getMidPreferences(availablePlayers) {
 // ALRIGHT
 // 50% Mid
 // 50% Eh
-//
-// If the selected side is unavailable, use the other side.
 // ============================================================
 
 function getAlrightPreferences(availablePlayers) {
@@ -420,7 +416,10 @@ randomizeButton.addEventListener("click", async () => {
         opponentRank.textContent = "—";
         opponentRank.className = "rank-badge";
 
-        setStatus("No suitable opponent is currently available.", true);
+        setStatus(
+            "No suitable opponent is currently available.",
+            true
+        );
 
         randomizeButton.disabled = false;
         return;
@@ -429,7 +428,9 @@ randomizeButton.addEventListener("click", async () => {
     await animateRandomSelection(opponentPool);
 
     const opponent =
-        opponentPool[Math.floor(Math.random() * opponentPool.length)];
+        opponentPool[
+            Math.floor(Math.random() * opponentPool.length)
+        ];
 
     opponentName.textContent = opponent.name;
     opponentRank.textContent = opponent.rank;
@@ -438,7 +439,11 @@ randomizeButton.addEventListener("click", async () => {
 
     opponentCard.classList.add("selected");
 
-    setStatus(`${selectedPlayer.name} has been matched!`, false, true);
+    setStatus(
+        `${selectedPlayer.name} has been matched!`,
+        false,
+        true
+    );
 
     randomizeButton.disabled = false;
 });
@@ -481,6 +486,9 @@ adminButton.addEventListener("click", () => {
     adminCode.value = "";
     adminLoginMessage.textContent = "";
 
+    isAdmin = false;
+    adminSessionCode = "";
+
     window.scrollTo({
         top: adminPanel.offsetTop - 30,
         behavior: "smooth"
@@ -490,8 +498,16 @@ adminButton.addEventListener("click", () => {
 
 closeAdminButton.addEventListener("click", () => {
     adminPanel.classList.add("hidden");
+
+    isAdmin = false;
+    adminSessionCode = "";
+    adminCode.value = "";
 });
 
+
+// ============================================================
+// ADMIN LOGIN BUTTON
+// ============================================================
 
 adminLoginButton.addEventListener("click", loginAsAdmin);
 
@@ -510,7 +526,8 @@ async function loginAsAdmin() {
     const code = adminCode.value.trim();
 
     if (!/^\d{6}$/.test(code)) {
-        adminLoginMessage.textContent = "Enter the 6-digit administrator code.";
+        adminLoginMessage.textContent =
+            "Enter the 6-digit administrator code.";
         return;
     }
 
@@ -528,17 +545,22 @@ async function loginAsAdmin() {
 
     if (error) {
         console.error(error);
+
         adminLoginMessage.textContent =
             "Could not verify the administrator code.";
+
         return;
     }
 
     if (data !== true) {
-        adminLoginMessage.textContent = "Incorrect administrator code.";
+        adminLoginMessage.textContent =
+            "Incorrect administrator code.";
+
         return;
     }
 
     isAdmin = true;
+    adminSessionCode = code;
 
     adminLoginArea.classList.add("hidden");
     adminControls.classList.remove("hidden");
@@ -613,13 +635,12 @@ function renderPlayerManagement() {
 
 // ============================================================
 // CHANGE RANK
-//
 // direction -1 = promote
 // direction +1 = demote
 // ============================================================
 
 async function changePlayerRank(player, direction) {
-    if (!isAdmin) {
+    if (!isAdmin || !adminSessionCode) {
         return;
     }
 
@@ -641,18 +662,22 @@ async function changePlayerRank(player, direction) {
         "change_player_rank",
         {
             player_id: player.id,
-            new_rank: newRank
+            new_rank: newRank,
+            entered_code: adminSessionCode
         }
     );
 
     if (error) {
         console.error(error);
+
         alert("The rank could not be saved to Supabase.");
+
         return;
     }
 
     if (data !== true) {
         alert("The rank could not be saved to Supabase.");
+
         return;
     }
 
@@ -664,13 +689,21 @@ async function changePlayerRank(player, direction) {
 
     playerName.textContent = player.name;
     playerRank.textContent = player.rank;
-    setRankBadge(playerRank, player.rank);
+
+    setRankBadge(
+        playerRank,
+        player.rank
+    );
 
     randomizeButton.disabled = false;
 
     renderPlayerManagement();
 
-    setStatus(`${player.name} is now ${newRank}.`, false, true);
+    setStatus(
+        `${player.name} is now ${newRank}.`,
+        false,
+        true
+    );
 }
 
 
