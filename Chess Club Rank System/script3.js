@@ -1,436 +1,759 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+// ============================================================
+// SUPABASE CONFIGURATION
+// Replace these two values with your matchmaking Supabase project
+// ============================================================
 
-:root {
-    --background: #07140f;
-    --background-light: #0d2118;
-    --panel: #10291d;
-    --panel-light: #173824;
-    --border: #28543a;
-    --text: #f1f7f2;
-    --muted: #a8b9ae;
-    --accent: #4caf68;
-    --accent-dark: #286b3b;
-    --danger: #d94a4a;
-}
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
-body {
-    min-height: 100vh;
-    background:
-        radial-gradient(circle at top, #173d28 0%, #0b1d14 38%, #050d09 100%);
-    color: var(--text);
-    font-family: Arial, Helvetica, sans-serif;
-}
+const { createClient } = supabase;
 
-.topbar {
-    width: 100%;
-    padding: 24px 6%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border);
-    background: rgba(5, 15, 10, 0.8);
-}
+const db = createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+);
 
-.topbar h1 {
-    font-size: 30px;
-}
 
-.topbar p {
-    margin-top: 4px;
-    color: var(--muted);
-}
+// ============================================================
+// MATCHMAKING RANKS
+// Strongest -> weakest
+// ============================================================
 
-.admin-button,
-.close-admin-button {
-    border: 1px solid var(--border);
-    background: #10271b;
-    color: var(--text);
-    padding: 10px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.2s;
-}
+const RANKS = [
+    "Great",
+    "Good",
+    "Mid",
+    "Alright",
+    "Eh"
+];
 
-.admin-button:hover,
-.close-admin-button:hover {
-    background: #1a3d29;
-}
 
-main {
-    width: min(1100px, 92%);
-    margin: 0 auto;
-    padding: 50px 0;
-}
+// ============================================================
+// PAGE ELEMENTS
+// ============================================================
 
-.matchmaking-section {
-    text-align: center;
-}
+const playerSelect = document.getElementById("playerSelect");
 
-.section-heading h2 {
-    font-size: 38px;
-    margin-bottom: 8px;
-}
+const playerCard = document.getElementById("playerCard");
+const opponentCard = document.getElementById("opponentCard");
 
-.section-heading p {
-    color: var(--muted);
-    font-size: 16px;
-}
+const playerName = document.getElementById("playerName");
+const playerRank = document.getElementById("playerRank");
 
-.player-selector {
-    margin: 35px auto 30px;
-    width: min(420px, 100%);
-    text-align: left;
-}
+const opponentName = document.getElementById("opponentName");
+const opponentRank = document.getElementById("opponentRank");
 
-.player-selector label,
-.admin-panel label {
-    display: block;
-    margin-bottom: 8px;
-    color: var(--muted);
-    font-size: 14px;
-}
+const randomizeButton = document.getElementById("randomizeButton");
+const statusMessage = document.getElementById("statusMessage");
 
-.player-selector select,
-.admin-login-row input {
-    width: 100%;
-    border: 1px solid var(--border);
-    background: #0b1c13;
-    color: var(--text);
-    border-radius: 9px;
-    padding: 14px;
-    font-size: 16px;
-    outline: none;
-}
+const adminButton = document.getElementById("adminButton");
+const adminPanel = document.getElementById("adminPanel");
+const closeAdminButton = document.getElementById("closeAdminButton");
 
-.player-selector select:focus,
-.admin-login-row input:focus {
-    border-color: var(--accent);
-}
+const adminCode = document.getElementById("adminCode");
+const adminLoginButton = document.getElementById("adminLoginButton");
+const adminLoginMessage = document.getElementById("adminLoginMessage");
 
-.match-area {
-    display: grid;
-    grid-template-columns: 1fr 120px 1fr;
-    align-items: center;
-    gap: 20px;
-    margin-top: 20px;
-}
+const adminLoginArea = document.getElementById("adminLoginArea");
+const adminControls = document.getElementById("adminControls");
+const playerManagement = document.getElementById("playerManagement");
 
-.player-card {
-    min-height: 245px;
-    border: 2px solid var(--border);
-    border-radius: 18px;
-    background:
-        linear-gradient(145deg, #153523, #0b1b12);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 30px;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-    transition: transform 0.2s, border-color 0.2s;
-}
 
-.player-card.selected {
-    transform: scale(1.02);
-    border-color: var(--accent);
-}
+// ============================================================
+// DATA
+// ============================================================
 
-.card-label {
-    font-size: 13px;
-    letter-spacing: 3px;
-    color: var(--muted);
-    margin-bottom: 20px;
-}
+let players = [];
+let isAdmin = false;
 
-.player-name {
-    font-size: clamp(25px, 4vw, 40px);
-    font-weight: bold;
-    word-break: break-word;
-}
 
-.rank-badge {
-    margin-top: 18px;
-    padding: 8px 18px;
-    border-radius: 999px;
-    font-size: 15px;
-    font-weight: bold;
-    background: #203027;
-}
+// ============================================================
+// STARTUP
+// ============================================================
 
-.vs {
-    font-size: 42px;
-    font-weight: 900;
-    color: #d9e9dc;
-    text-shadow: 0 0 18px rgba(76, 175, 104, 0.25);
-}
+document.addEventListener("DOMContentLoaded", loadPlayers);
 
-.randomize-button {
-    margin-top: 35px;
-    border: none;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #347d48, #4caf68);
-    color: white;
-    padding: 16px 28px;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 8px 25px rgba(38, 111, 58, 0.3);
-    transition: 0.2s;
-}
 
-.randomize-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-}
+// ============================================================
+// LOAD PLAYERS FROM SUPABASE
+// ============================================================
 
-.randomize-button:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
+async function loadPlayers() {
+    setStatus("Loading players...");
 
-.status-message {
-    min-height: 25px;
-    margin-top: 18px;
-    color: var(--muted);
-}
+    const { data, error } = await db
+        .from("players")
+        .select("id, name, rank")
+        .order("name", { ascending: true });
 
-.status-message.error {
-    color: #ff7777;
-}
-
-.status-message.success {
-    color: #75d98e;
-}
-
-.rank-guide {
-    margin-top: 65px;
-    text-align: center;
-}
-
-.rank-guide h2 {
-    margin-bottom: 22px;
-    font-size: 25px;
-}
-
-.rank-list {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.rank-item {
-    min-width: 135px;
-    padding: 14px 18px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-}
-
-.rank-item span {
-    margin-right: 7px;
-}
-
-.rank-item.great {
-    border-color: #239447;
-}
-
-.rank-item.good {
-    border-color: #51a85d;
-}
-
-.rank-item.mid {
-    border-color: #c3b83b;
-}
-
-.rank-item.alright {
-    border-color: #d98732;
-}
-
-.rank-item.eh {
-    border-color: #c84242;
-}
-
-.admin-panel {
-    margin-top: 65px;
-    padding: 30px;
-    background: rgba(13, 33, 24, 0.95);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-}
-
-.admin-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.admin-header h2 {
-    font-size: 27px;
-}
-
-.admin-header p {
-    color: var(--muted);
-    margin-top: 5px;
-}
-
-.admin-login-row {
-    display: flex;
-    gap: 10px;
-}
-
-.admin-login-row input {
-    max-width: 220px;
-}
-
-.admin-login-row button {
-    border: none;
-    background: var(--accent-dark);
-    color: white;
-    border-radius: 8px;
-    padding: 0 22px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.admin-message {
-    min-height: 24px;
-    margin-top: 10px;
-    color: #ff7777;
-}
-
-.admin-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: 15px;
-    color: var(--muted);
-}
-
-.admin-info strong {
-    color: var(--text);
-}
-
-.player-management {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.management-row {
-    display: grid;
-    grid-template-columns: 1fr 150px 90px 90px;
-    align-items: center;
-    gap: 12px;
-    padding: 13px 15px;
-    background: #0a1b12;
-    border: 1px solid #1e3c2b;
-    border-radius: 9px;
-}
-
-.management-name {
-    font-weight: bold;
-}
-
-.management-rank {
-    font-weight: bold;
-}
-
-.rank-button {
-    width: 100%;
-    border: 1px solid var(--border);
-    background: #132b1d;
-    color: white;
-    border-radius: 7px;
-    padding: 9px;
-    font-size: 18px;
-    cursor: pointer;
-}
-
-.rank-button:hover:not(:disabled) {
-    background: #214a30;
-}
-
-.rank-button:disabled {
-    opacity: 0.25;
-    cursor: not-allowed;
-}
-
-.great-text {
-    color: #49c968;
-}
-
-.good-text {
-    color: #75c77d;
-}
-
-.mid-text {
-    color: #e2d64f;
-}
-
-.alright-text {
-    color: #e49a4a;
-}
-
-.eh-text {
-    color: #ef5a5a;
-}
-
-.hidden {
-    display: none !important;
-}
-
-footer {
-    text-align: center;
-    padding: 25px;
-    color: #718279;
-    font-size: 13px;
-}
-
-@media (max-width: 750px) {
-    .topbar {
-        padding: 20px;
+    if (error) {
+        console.error(error);
+        setStatus("Could not load players from Supabase.", true);
+        return;
     }
 
-    main {
-        width: 94%;
-        padding-top: 35px;
+    players = data || [];
+
+    populatePlayerSelector();
+
+    if (players.length === 0) {
+        setStatus("No players are currently available.");
+        randomizeButton.disabled = true;
+        return;
     }
 
-    .section-heading h2 {
-        font-size: 30px;
+    setStatus("");
+}
+
+
+// ============================================================
+// PLAYER SELECTOR
+// ============================================================
+
+function populatePlayerSelector() {
+    playerSelect.innerHTML = `
+        <option value="">Select a player...</option>
+    `;
+
+    players.forEach(player => {
+        const option = document.createElement("option");
+
+        option.value = player.id;
+        option.textContent = `${player.name} (${player.rank})`;
+
+        playerSelect.appendChild(option);
+    });
+
+    randomizeButton.disabled = true;
+}
+
+
+// ============================================================
+// PLAYER SELECTION
+// ============================================================
+
+playerSelect.addEventListener("change", () => {
+    const selectedPlayer = getSelectedPlayer();
+
+    opponentName.textContent = "Waiting...";
+    opponentRank.textContent = "—";
+    opponentRank.className = "rank-badge";
+
+    if (!selectedPlayer) {
+        playerName.textContent = "Select a player";
+        playerRank.textContent = "—";
+        playerRank.className = "rank-badge";
+
+        randomizeButton.disabled = true;
+        playerCard.classList.remove("selected");
+        opponentCard.classList.remove("selected");
+
+        return;
     }
 
-    .match-area {
-        grid-template-columns: 1fr;
-        gap: 12px;
+    playerName.textContent = selectedPlayer.name;
+    playerRank.textContent = selectedPlayer.rank;
+
+    setRankBadge(playerRank, selectedPlayer.rank);
+
+    playerCard.classList.add("selected");
+    opponentCard.classList.remove("selected");
+
+    randomizeButton.disabled = false;
+
+    setStatus("");
+});
+
+
+// ============================================================
+// GET SELECTED PLAYER
+// ============================================================
+
+function getSelectedPlayer() {
+    const id = playerSelect.value;
+
+    if (!id) {
+        return null;
     }
 
-    .player-card {
-        min-height: 190px;
+    return players.find(player => String(player.id) === String(id)) || null;
+}
+
+
+// ============================================================
+// MATCHMAKING
+// ============================================================
+
+function getOpponentPool(selectedPlayer) {
+    const availablePlayers = players.filter(
+        player => String(player.id) !== String(selectedPlayer.id)
+    );
+
+    if (availablePlayers.length === 0) {
+        return [];
     }
 
-    .vs {
-        font-size: 28px;
+    const rank = selectedPlayer.rank;
+
+    let preferredRanks = [];
+
+    switch (rank) {
+        case "Great":
+            preferredRanks = getGreatPreferences(availablePlayers);
+            break;
+
+        case "Good":
+            preferredRanks = getGoodPreferences(availablePlayers);
+            break;
+
+        case "Mid":
+            preferredRanks = getMidPreferences(availablePlayers);
+            break;
+
+        case "Alright":
+            preferredRanks = getAlrightPreferences(availablePlayers);
+            break;
+
+        case "Eh":
+            preferredRanks = getEhPreferences(availablePlayers);
+            break;
+
+        default:
+            return [];
     }
 
-    .management-row {
-        grid-template-columns: 1fr 100px 55px 55px;
+    for (const rankChoice of preferredRanks) {
+        const pool = availablePlayers.filter(
+            player => player.rank === rankChoice
+        );
+
+        if (pool.length > 0) {
+            return pool;
+        }
     }
 
-    .admin-panel {
-        padding: 20px;
+    return [];
+}
+
+
+// ============================================================
+// GREAT
+// Great -> Great
+// If no other Great -> Good
+// ============================================================
+
+function getGreatPreferences(availablePlayers) {
+    const greatPlayers = availablePlayers.filter(
+        player => player.rank === "Great"
+    );
+
+    if (greatPlayers.length > 0) {
+        return ["Great", "Good"];
     }
 
-    .admin-info {
-        flex-direction: column;
-        align-items: flex-start;
+    return ["Good"];
+}
+
+
+// ============================================================
+// GOOD
+// 50% Great
+// 50% Mid
+//
+// If the selected side is unavailable, use the other side.
+// ============================================================
+
+function getGoodPreferences(availablePlayers) {
+    const greatAvailable = availablePlayers.some(
+        player => player.rank === "Great"
+    );
+
+    const midAvailable = availablePlayers.some(
+        player => player.rank === "Mid"
+    );
+
+    const randomChoice = Math.random() < 0.5;
+
+    if (randomChoice) {
+        if (greatAvailable) {
+            return ["Great", "Mid"];
+        }
+
+        if (midAvailable) {
+            return ["Mid", "Great"];
+        }
+    } else {
+        if (midAvailable) {
+            return ["Mid", "Great"];
+        }
+
+        if (greatAvailable) {
+            return ["Great", "Mid"];
+        }
     }
+
+    return [];
+}
+
+
+// ============================================================
+// MID
+// 50% Good
+// 50% Alright
+//
+// If the selected side is unavailable, use the other side.
+// ============================================================
+
+function getMidPreferences(availablePlayers) {
+    const goodAvailable = availablePlayers.some(
+        player => player.rank === "Good"
+    );
+
+    const alrightAvailable = availablePlayers.some(
+        player => player.rank === "Alright"
+    );
+
+    const randomChoice = Math.random() < 0.5;
+
+    if (randomChoice) {
+        if (goodAvailable) {
+            return ["Good", "Alright"];
+        }
+
+        if (alrightAvailable) {
+            return ["Alright", "Good"];
+        }
+    } else {
+        if (alrightAvailable) {
+            return ["Alright", "Good"];
+        }
+
+        if (goodAvailable) {
+            return ["Good", "Alright"];
+        }
+    }
+
+    return [];
+}
+
+
+// ============================================================
+// ALRIGHT
+// 50% Mid
+// 50% Eh
+//
+// If the selected side is unavailable, use the other side.
+// ============================================================
+
+function getAlrightPreferences(availablePlayers) {
+    const midAvailable = availablePlayers.some(
+        player => player.rank === "Mid"
+    );
+
+    const ehAvailable = availablePlayers.some(
+        player => player.rank === "Eh"
+    );
+
+    const randomChoice = Math.random() < 0.5;
+
+    if (randomChoice) {
+        if (midAvailable) {
+            return ["Mid", "Eh"];
+        }
+
+        if (ehAvailable) {
+            return ["Eh", "Mid"];
+        }
+    } else {
+        if (ehAvailable) {
+            return ["Eh", "Mid"];
+        }
+
+        if (midAvailable) {
+            return ["Mid", "Eh"];
+        }
+    }
+
+    return [];
+}
+
+
+// ============================================================
+// EH
+// Eh -> Eh
+// If no other Eh -> Alright
+// ============================================================
+
+function getEhPreferences(availablePlayers) {
+    const ehPlayers = availablePlayers.filter(
+        player => player.rank === "Eh"
+    );
+
+    if (ehPlayers.length > 0) {
+        return ["Eh", "Alright"];
+    }
+
+    return ["Alright"];
+}
+
+
+// ============================================================
+// RANDOM OPPONENT BUTTON
+// ============================================================
+
+randomizeButton.addEventListener("click", async () => {
+    const selectedPlayer = getSelectedPlayer();
+
+    if (!selectedPlayer) {
+        return;
+    }
+
+    randomizeButton.disabled = true;
+    setStatus("Finding an opponent...");
+
+    opponentCard.classList.remove("selected");
+
+    const opponentPool = getOpponentPool(selectedPlayer);
+
+    if (opponentPool.length === 0) {
+        opponentName.textContent = "No opponent";
+        opponentRank.textContent = "—";
+        opponentRank.className = "rank-badge";
+
+        setStatus("No suitable opponent is currently available.", true);
+
+        randomizeButton.disabled = false;
+        return;
+    }
+
+    await animateRandomSelection(opponentPool);
+
+    const opponent =
+        opponentPool[Math.floor(Math.random() * opponentPool.length)];
+
+    opponentName.textContent = opponent.name;
+    opponentRank.textContent = opponent.rank;
+
+    setRankBadge(opponentRank, opponent.rank);
+
+    opponentCard.classList.add("selected");
+
+    setStatus(`${selectedPlayer.name} has been matched!`, false, true);
+
+    randomizeButton.disabled = false;
+});
+
+
+// ============================================================
+// RANDOM ANIMATION
+// ============================================================
+
+async function animateRandomSelection(pool) {
+    const animationTime = 850;
+    const intervalTime = 75;
+
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < animationTime) {
+        const randomPlayer =
+            pool[Math.floor(Math.random() * pool.length)];
+
+        opponentName.textContent = randomPlayer.name;
+        opponentRank.textContent = randomPlayer.rank;
+
+        setRankBadge(opponentRank, randomPlayer.rank);
+
+        await wait(intervalTime);
+    }
+}
+
+
+// ============================================================
+// ADMIN AREA
+// ============================================================
+
+adminButton.addEventListener("click", () => {
+    adminPanel.classList.remove("hidden");
+
+    adminLoginArea.classList.remove("hidden");
+    adminControls.classList.add("hidden");
+
+    adminCode.value = "";
+    adminLoginMessage.textContent = "";
+
+    window.scrollTo({
+        top: adminPanel.offsetTop - 30,
+        behavior: "smooth"
+    });
+});
+
+
+closeAdminButton.addEventListener("click", () => {
+    adminPanel.classList.add("hidden");
+});
+
+
+adminLoginButton.addEventListener("click", loginAsAdmin);
+
+adminCode.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+        loginAsAdmin();
+    }
+});
+
+
+// ============================================================
+// ADMIN LOGIN
+// ============================================================
+
+async function loginAsAdmin() {
+    const code = adminCode.value.trim();
+
+    if (!/^\d{6}$/.test(code)) {
+        adminLoginMessage.textContent = "Enter the 6-digit administrator code.";
+        return;
+    }
+
+    adminLoginButton.disabled = true;
+    adminLoginMessage.textContent = "Checking code...";
+
+    const { data, error } = await db.rpc(
+        "verify_admin_code",
+        {
+            entered_code: code
+        }
+    );
+
+    adminLoginButton.disabled = false;
+
+    if (error) {
+        console.error(error);
+        adminLoginMessage.textContent =
+            "Could not verify the administrator code.";
+        return;
+    }
+
+    if (data !== true) {
+        adminLoginMessage.textContent = "Incorrect administrator code.";
+        return;
+    }
+
+    isAdmin = true;
+
+    adminLoginArea.classList.add("hidden");
+    adminControls.classList.remove("hidden");
+
+    adminLoginMessage.textContent = "";
+
+    renderPlayerManagement();
+}
+
+
+// ============================================================
+// ADMIN PLAYER MANAGEMENT
+// ============================================================
+
+function renderPlayerManagement() {
+    playerManagement.innerHTML = "";
+
+    const sortedPlayers = [...players].sort((a, b) => {
+        const rankDifference =
+            RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+
+        if (rankDifference !== 0) {
+            return rankDifference;
+        }
+
+        return a.name.localeCompare(b.name);
+    });
+
+    sortedPlayers.forEach(player => {
+        const row = document.createElement("div");
+        row.className = "management-row";
+
+        const name = document.createElement("div");
+        name.className = "management-name";
+        name.textContent = player.name;
+
+        const rank = document.createElement("div");
+        rank.className = "management-rank";
+        rank.textContent = player.rank;
+        rank.classList.add(getRankTextClass(player.rank));
+
+        const upButton = document.createElement("button");
+        upButton.className = "rank-button";
+        upButton.textContent = "↑";
+
+        const downButton = document.createElement("button");
+        downButton.className = "rank-button";
+        downButton.textContent = "↓";
+
+        const rankIndex = RANKS.indexOf(player.rank);
+
+        upButton.disabled = rankIndex === 0;
+        downButton.disabled = rankIndex === RANKS.length - 1;
+
+        upButton.addEventListener("click", () => {
+            changePlayerRank(player, -1);
+        });
+
+        downButton.addEventListener("click", () => {
+            changePlayerRank(player, 1);
+        });
+
+        row.appendChild(name);
+        row.appendChild(rank);
+        row.appendChild(upButton);
+        row.appendChild(downButton);
+
+        playerManagement.appendChild(row);
+    });
+}
+
+
+// ============================================================
+// CHANGE RANK
+//
+// direction -1 = promote
+// direction +1 = demote
+// ============================================================
+
+async function changePlayerRank(player, direction) {
+    if (!isAdmin) {
+        return;
+    }
+
+    const currentIndex = RANKS.indexOf(player.rank);
+
+    if (currentIndex === -1) {
+        return;
+    }
+
+    const newIndex = currentIndex + direction;
+
+    if (newIndex < 0 || newIndex >= RANKS.length) {
+        return;
+    }
+
+    const newRank = RANKS[newIndex];
+
+    const { data, error } = await db.rpc(
+        "change_player_rank",
+        {
+            player_id: player.id,
+            new_rank: newRank
+        }
+    );
+
+    if (error) {
+        console.error(error);
+        alert("The rank could not be saved to Supabase.");
+        return;
+    }
+
+    if (data !== true) {
+        alert("The rank could not be saved to Supabase.");
+        return;
+    }
+
+    player.rank = newRank;
+
+    populatePlayerSelector();
+
+    playerSelect.value = String(player.id);
+
+    playerName.textContent = player.name;
+    playerRank.textContent = player.rank;
+    setRankBadge(playerRank, player.rank);
+
+    randomizeButton.disabled = false;
+
+    renderPlayerManagement();
+
+    setStatus(`${player.name} is now ${newRank}.`, false, true);
+}
+
+
+// ============================================================
+// RANK DISPLAY
+// ============================================================
+
+function setRankBadge(element, rank) {
+    element.textContent = rank;
+    element.className = "rank-badge";
+
+    switch (rank) {
+        case "Great":
+            element.classList.add("great-text");
+            break;
+
+        case "Good":
+            element.classList.add("good-text");
+            break;
+
+        case "Mid":
+            element.classList.add("mid-text");
+            break;
+
+        case "Alright":
+            element.classList.add("alright-text");
+            break;
+
+        case "Eh":
+            element.classList.add("eh-text");
+            break;
+    }
+}
+
+
+function getRankTextClass(rank) {
+    switch (rank) {
+        case "Great":
+            return "great-text";
+
+        case "Good":
+            return "good-text";
+
+        case "Mid":
+            return "mid-text";
+
+        case "Alright":
+            return "alright-text";
+
+        case "Eh":
+            return "eh-text";
+
+        default:
+            return "";
+    }
+}
+
+
+// ============================================================
+// STATUS MESSAGE
+// ============================================================
+
+function setStatus(message, error = false, success = false) {
+    statusMessage.textContent = message;
+
+    statusMessage.className = "status-message";
+
+    if (error) {
+        statusMessage.classList.add("error");
+    }
+
+    if (success) {
+        statusMessage.classList.add("success");
+    }
+}
+
+
+// ============================================================
+// UTILITY
+// ============================================================
+
+function wait(milliseconds) {
+    return new Promise(resolve => {
+        setTimeout(resolve, milliseconds);
+    });
 }
