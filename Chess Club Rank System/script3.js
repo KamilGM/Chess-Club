@@ -111,6 +111,8 @@ async function loadPlayers() {
 // ============================================================
 
 function populatePlayerSelector() {
+    const currentPlayerId = playerSelect.value;
+
     playerSelect.innerHTML = `
         <option value="">Select a player...</option>
     `;
@@ -124,7 +126,16 @@ function populatePlayerSelector() {
         playerSelect.appendChild(option);
     });
 
-    randomizeButton.disabled = true;
+    if (
+        currentPlayerId &&
+        players.some(
+            player => String(player.id) === String(currentPlayerId)
+        )
+    ) {
+        playerSelect.value = currentPlayerId;
+    }
+
+    randomizeButton.disabled = !playerSelect.value;
 }
 
 
@@ -133,20 +144,23 @@ function populatePlayerSelector() {
 // ============================================================
 
 playerSelect.addEventListener("change", () => {
+
     const selectedPlayer = getSelectedPlayer();
 
     opponentName.textContent = "Waiting...";
     opponentRank.textContent = "—";
     opponentRank.className = "rank-badge";
 
+    opponentCard.classList.remove("selected");
+
     if (!selectedPlayer) {
+
         playerName.textContent = "Select a player";
         playerRank.textContent = "—";
         playerRank.className = "rank-badge";
 
         randomizeButton.disabled = true;
         playerCard.classList.remove("selected");
-        opponentCard.classList.remove("selected");
 
         return;
     }
@@ -154,10 +168,12 @@ playerSelect.addEventListener("change", () => {
     playerName.textContent = selectedPlayer.name;
     playerRank.textContent = selectedPlayer.rank;
 
-    setRankBadge(playerRank, selectedPlayer.rank);
+    setRankBadge(
+        playerRank,
+        selectedPlayer.rank
+    );
 
     playerCard.classList.add("selected");
-    opponentCard.classList.remove("selected");
 
     randomizeButton.disabled = false;
 
@@ -170,6 +186,7 @@ playerSelect.addEventListener("change", () => {
 // ============================================================
 
 function getSelectedPlayer() {
+
     const id = playerSelect.value;
 
     if (!id) {
@@ -185,85 +202,112 @@ function getSelectedPlayer() {
 // ============================================================
 // MATCHMAKING
 //
-// 90% chance:
-// Pick someone from the SAME rank.
+// SAME RANK:
+// 90% chance of same rank
+// 10% chance of one rank higher or lower
 //
-// 10% chance:
-// Pick someone one rank above OR below.
+// If an adjacent rank has nobody available,
+// it falls back to the same rank.
 //
-// If the 10% choice has nobody available,
-// fall back to the same rank.
-//
-// If there is nobody in the same rank,
-// use an adjacent rank.
+// If nobody is in the same rank at all,
+// it uses an adjacent rank.
 // ============================================================
 
 function getOpponentPool(selectedPlayer) {
+
     const availablePlayers = players.filter(
-        player => String(player.id) !== String(selectedPlayer.id)
+        player =>
+            String(player.id) !==
+            String(selectedPlayer.id)
     );
 
     if (availablePlayers.length === 0) {
         return [];
     }
 
-    const selectedRankIndex = RANKS.indexOf(selectedPlayer.rank);
 
-    if (selectedRankIndex === -1) {
+    const rankIndex =
+        RANKS.indexOf(selectedPlayer.rank);
+
+    if (rankIndex === -1) {
         return [];
     }
 
-    const sameRankPlayers = availablePlayers.filter(
-        player => player.rank === selectedPlayer.rank
-    );
+
+    // ========================================================
+    // SAME RANK PLAYERS
+    // ========================================================
+
+    const sameRankPlayers =
+        availablePlayers.filter(
+            player =>
+                player.rank ===
+                selectedPlayer.rank
+        );
+
+
+    // ========================================================
+    // ONE RANK HIGHER
+    // ========================================================
 
     const higherRankPlayers =
-        selectedRankIndex > 0
+        rankIndex > 0
             ? availablePlayers.filter(
-                player => player.rank === RANKS[selectedRankIndex - 1]
-            )
-            : [];
-
-    const lowerRankPlayers =
-        selectedRankIndex < RANKS.length - 1
-            ? availablePlayers.filter(
-                player => player.rank === RANKS[selectedRankIndex + 1]
+                player =>
+                    player.rank ===
+                    RANKS[rankIndex - 1]
             )
             : [];
 
 
     // ========================================================
-    // IF SOMEONE IS IN THE SAME RANK
-    // 90% SAME RANK
-    // 10% ADJACENT RANK
+    // ONE RANK LOWER
+    // ========================================================
+
+    const lowerRankPlayers =
+        rankIndex < RANKS.length - 1
+            ? availablePlayers.filter(
+                player =>
+                    player.rank ===
+                    RANKS[rankIndex + 1]
+            )
+            : [];
+
+
+    // ========================================================
+    // IF SAME RANK EXISTS
     // ========================================================
 
     if (sameRankPlayers.length > 0) {
 
-        // 90% chance of same rank
-        if (Math.random() < 0.9) {
+        // 90% SAME RANK
+        if (Math.random() < 0.90) {
             return sameRankPlayers;
         }
 
-        // 10% chance of adjacent rank
+
+        // 10% ADJACENT RANK
         const adjacentPlayers = [
             ...higherRankPlayers,
             ...lowerRankPlayers
         ];
 
+
+        // If there is someone one rank higher
+        // or lower, use them.
         if (adjacentPlayers.length > 0) {
             return adjacentPlayers;
         }
 
-        // No adjacent player available
+
+        // No adjacent player exists.
+        // Stay at the same rank.
         return sameRankPlayers;
     }
 
 
     // ========================================================
-    // NOBODY IN SAME RANK
-    //
-    // Pick from an adjacent rank.
+    // NO SAME RANK PLAYERS
     // ========================================================
 
     const adjacentPlayers = [
@@ -271,11 +315,7 @@ function getOpponentPool(selectedPlayer) {
         ...lowerRankPlayers
     ];
 
-    if (adjacentPlayers.length > 0) {
-        return adjacentPlayers;
-    }
-
-    return [];
+    return adjacentPlayers;
 }
 
 
@@ -284,60 +324,108 @@ function getOpponentPool(selectedPlayer) {
 // ============================================================
 
 randomizeButton.addEventListener("click", async () => {
-    const selectedPlayer = getSelectedPlayer();
+
+    const selectedPlayer =
+        getSelectedPlayer();
+
 
     if (!selectedPlayer) {
         return;
     }
 
+
     randomizeButton.disabled = true;
 
     setStatus("Finding an opponent...");
 
+
     opponentCard.classList.remove("selected");
 
-    opponentName.textContent = "Spinning...";
+    opponentName.textContent = "SPINNING...";
     opponentRank.textContent = "—";
     opponentRank.className = "rank-badge";
 
 
-    const opponentPool = getOpponentPool(selectedPlayer);
+    // ========================================================
+    // GET THE CORRECT POOL
+    // ========================================================
 
+    const opponentPool =
+        getOpponentPool(selectedPlayer);
+
+
+    // ========================================================
+    // NO OPPONENT
+    // ========================================================
 
     if (opponentPool.length === 0) {
 
-        opponentName.textContent = "No opponent";
-        opponentRank.textContent = "—";
-        opponentRank.className = "rank-badge";
+        opponentName.textContent =
+            "No opponent";
+
+        opponentRank.textContent =
+            "—";
+
+        opponentRank.className =
+            "rank-badge";
+
 
         setStatus(
             "No suitable opponent is currently available.",
             true
         );
 
-        randomizeButton.disabled = false;
+
+        randomizeButton.disabled =
+            false;
 
         return;
     }
 
 
-    // Spin through the possible opponents
-    await animateRandomSelection(opponentPool);
+    // ========================================================
+    // PICK THE REAL OPPONENT FIRST
+    // ========================================================
 
-
-    // Choose the actual opponent
     const opponent =
         opponentPool[
-            Math.floor(Math.random() * opponentPool.length)
+            Math.floor(
+                Math.random() *
+                opponentPool.length
+            )
         ];
 
 
-    opponentName.textContent = opponent.name;
-    opponentRank.textContent = opponent.rank;
+    // ========================================================
+    // RUN THE SPINNER
+    // ========================================================
 
-    setRankBadge(opponentRank, opponent.rank);
+    await animateRandomSelection(
+        opponentPool,
+        opponent
+    );
 
-    opponentCard.classList.add("selected");
+
+    // ========================================================
+    // FINAL RESULT
+    // ========================================================
+
+    opponentName.textContent =
+        opponent.name;
+
+    opponentRank.textContent =
+        opponent.rank;
+
+
+    setRankBadge(
+        opponentRank,
+        opponent.rank
+    );
+
+
+    opponentCard.classList.add(
+        "selected"
+    );
 
 
     setStatus(
@@ -347,27 +435,54 @@ randomizeButton.addEventListener("click", async () => {
     );
 
 
-    randomizeButton.disabled = false;
+    randomizeButton.disabled =
+        false;
 });
 
 
 // ============================================================
 // SPINNING ANIMATION
-// Starts fast and gradually slows down.
+//
+// The names cycle rapidly at first.
+// The spinner gradually slows down.
+// It finishes on the actual selected opponent.
 // ============================================================
 
-async function animateRandomSelection(pool) {
+async function animateRandomSelection(
+    pool,
+    finalOpponent
+) {
 
-    const totalSpins = 24;
+    const spinTime = 2200;
 
-    for (let i = 0; i < totalSpins; i++) {
+    const startTime =
+        Date.now();
+
+
+    let delay = 40;
+
+
+    while (
+        Date.now() - startTime <
+        spinTime
+    ) {
 
         const randomPlayer =
-            pool[Math.floor(Math.random() * pool.length)];
+            pool[
+                Math.floor(
+                    Math.random() *
+                    pool.length
+                )
+            ];
 
 
-        opponentName.textContent = randomPlayer.name;
-        opponentRank.textContent = randomPlayer.rank;
+        opponentName.textContent =
+            randomPlayer.name;
+
+
+        opponentRank.textContent =
+            randomPlayer.rank;
+
 
         setRankBadge(
             opponentRank,
@@ -375,16 +490,50 @@ async function animateRandomSelection(pool) {
         );
 
 
-        // Starts fast
-        // Gradually slows down
-        const progress = i / totalSpins;
+        // ====================================================
+        // SLOW DOWN OVER TIME
+        // ====================================================
 
-        const intervalTime =
-            45 + Math.pow(progress, 3) * 250;
+        const elapsed =
+            Date.now() -
+            startTime;
 
 
-        await wait(intervalTime);
+        const progress =
+            Math.min(
+                elapsed / spinTime,
+                1
+            );
+
+
+        delay =
+            40 +
+            Math.pow(
+                progress,
+                3
+            ) * 300;
+
+
+        await wait(delay);
     }
+
+
+    // ========================================================
+    // LAND ON THE ACTUAL OPPONENT
+    // ========================================================
+
+    opponentName.textContent =
+        finalOpponent.name;
+
+
+    opponentRank.textContent =
+        finalOpponent.rank;
+
+
+    setRankBadge(
+        opponentRank,
+        finalOpponent.rank
+    );
 }
 
 
@@ -394,30 +543,52 @@ async function animateRandomSelection(pool) {
 
 adminButton.addEventListener("click", () => {
 
-    adminPanel.classList.remove("hidden");
+    adminPanel.classList.remove(
+        "hidden"
+    );
 
-    adminLoginArea.classList.remove("hidden");
-    adminControls.classList.add("hidden");
+
+    adminLoginArea.classList.remove(
+        "hidden"
+    );
+
+
+    adminControls.classList.add(
+        "hidden"
+    );
+
 
     adminCode.value = "";
+
     adminLoginMessage.textContent = "";
 
+
     isAdmin = false;
+
     adminSessionCode = "";
 
 
     window.scrollTo({
-        top: adminPanel.offsetTop - 30,
+        top:
+            adminPanel.offsetTop - 30,
         behavior: "smooth"
     });
 });
 
 
+// ============================================================
+// CLOSE ADMIN
+// ============================================================
+
 closeAdminButton.addEventListener("click", () => {
 
-    adminPanel.classList.add("hidden");
+    adminPanel.classList.add(
+        "hidden"
+    );
+
 
     isAdmin = false;
+
     adminSessionCode = "";
 
     adminCode.value = "";
@@ -428,15 +599,22 @@ closeAdminButton.addEventListener("click", () => {
 // ADMIN LOGIN BUTTON
 // ============================================================
 
-adminLoginButton.addEventListener("click", loginAsAdmin);
+adminLoginButton.addEventListener(
+    "click",
+    loginAsAdmin
+);
 
-adminCode.addEventListener("keydown", event => {
 
-    if (event.key === "Enter") {
-        loginAsAdmin();
+adminCode.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key === "Enter") {
+            loginAsAdmin();
+        }
+
     }
-
-});
+);
 
 
 // ============================================================
@@ -445,7 +623,8 @@ adminCode.addEventListener("keydown", event => {
 
 async function loginAsAdmin() {
 
-    const code = adminCode.value.trim();
+    const code =
+        adminCode.value.trim();
 
 
     if (!/^\d{6}$/.test(code)) {
@@ -457,26 +636,31 @@ async function loginAsAdmin() {
     }
 
 
-    adminLoginButton.disabled = true;
+    adminLoginButton.disabled =
+        true;
+
 
     adminLoginMessage.textContent =
         "Checking code...";
 
 
-    const { data, error } = await db.rpc(
-        "verify_admin_code",
-        {
-            entered_code: code
-        }
-    );
+    const { data, error } =
+        await db.rpc(
+            "verify_admin_code",
+            {
+                entered_code: code
+            }
+        );
 
 
-    adminLoginButton.disabled = false;
+    adminLoginButton.disabled =
+        false;
 
 
     if (error) {
 
         console.error(error);
+
 
         adminLoginMessage.textContent =
             "Could not verify the administrator code.";
@@ -499,11 +683,18 @@ async function loginAsAdmin() {
     adminSessionCode = code;
 
 
-    adminLoginArea.classList.add("hidden");
+    adminLoginArea.classList.add(
+        "hidden"
+    );
 
-    adminControls.classList.remove("hidden");
 
-    adminLoginMessage.textContent = "";
+    adminControls.classList.remove(
+        "hidden"
+    );
+
+
+    adminLoginMessage.textContent =
+        "";
 
 
     renderPlayerManagement();
@@ -516,107 +707,158 @@ async function loginAsAdmin() {
 
 function renderPlayerManagement() {
 
-    playerManagement.innerHTML = "";
+    playerManagement.innerHTML =
+        "";
 
 
-    const sortedPlayers = [...players].sort((a, b) => {
+    const sortedPlayers =
+        [...players].sort(
+            (a, b) => {
 
-        const rankDifference =
-            RANKS.indexOf(a.rank) -
-            RANKS.indexOf(b.rank);
-
-
-        if (rankDifference !== 0) {
-            return rankDifference;
-        }
+                const rankDifference =
+                    RANKS.indexOf(a.rank) -
+                    RANKS.indexOf(b.rank);
 
 
-        return a.name.localeCompare(b.name);
-    });
+                if (rankDifference !== 0) {
+                    return rankDifference;
+                }
 
 
-    sortedPlayers.forEach(player => {
-
-        const row =
-            document.createElement("div");
-
-        row.className =
-            "management-row";
-
-
-        const name =
-            document.createElement("div");
-
-        name.className =
-            "management-name";
-
-        name.textContent =
-            player.name;
-
-
-        const rank =
-            document.createElement("div");
-
-        rank.className =
-            "management-rank";
-
-        rank.textContent =
-            player.rank;
-
-        rank.classList.add(
-            getRankTextClass(player.rank)
+                return a.name.localeCompare(
+                    b.name
+                );
+            }
         );
 
 
-        const upButton =
-            document.createElement("button");
+    sortedPlayers.forEach(
+        player => {
 
-        upButton.className =
-            "rank-button";
-
-        upButton.textContent =
-            "↑";
-
-
-        const downButton =
-            document.createElement("button");
-
-        downButton.className =
-            "rank-button";
-
-        downButton.textContent =
-            "↓";
+            const row =
+                document.createElement(
+                    "div"
+                );
 
 
-        const rankIndex =
-            RANKS.indexOf(player.rank);
+            row.className =
+                "management-row";
 
 
-        upButton.disabled =
-            rankIndex === 0;
-
-        downButton.disabled =
-            rankIndex === RANKS.length - 1;
-
-
-        upButton.addEventListener("click", () => {
-            changePlayerRank(player, -1);
-        });
+            const name =
+                document.createElement(
+                    "div"
+                );
 
 
-        downButton.addEventListener("click", () => {
-            changePlayerRank(player, 1);
-        });
+            name.className =
+                "management-name";
 
 
-        row.appendChild(name);
-        row.appendChild(rank);
-        row.appendChild(upButton);
-        row.appendChild(downButton);
+            name.textContent =
+                player.name;
 
 
-        playerManagement.appendChild(row);
-    });
+            const rank =
+                document.createElement(
+                    "div"
+                );
+
+
+            rank.className =
+                "management-rank";
+
+
+            rank.textContent =
+                player.rank;
+
+
+            rank.classList.add(
+                getRankTextClass(
+                    player.rank
+                )
+            );
+
+
+            const upButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            upButton.className =
+                "rank-button";
+
+
+            upButton.textContent =
+                "↑";
+
+
+            const downButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            downButton.className =
+                "rank-button";
+
+
+            downButton.textContent =
+                "↓";
+
+
+            const rankIndex =
+                RANKS.indexOf(
+                    player.rank
+                );
+
+
+            upButton.disabled =
+                rankIndex === 0;
+
+
+            downButton.disabled =
+                rankIndex ===
+                RANKS.length - 1;
+
+
+            upButton.addEventListener(
+                "click",
+                () => {
+                    changePlayerRank(
+                        player,
+                        -1
+                    );
+                }
+            );
+
+
+            downButton.addEventListener(
+                "click",
+                () => {
+                    changePlayerRank(
+                        player,
+                        1
+                    );
+                }
+            );
+
+
+            row.appendChild(name);
+
+            row.appendChild(rank);
+
+            row.appendChild(upButton);
+
+            row.appendChild(downButton);
+
+
+            playerManagement.appendChild(
+                row
+            );
+        }
+    );
 }
 
 
@@ -626,15 +868,23 @@ function renderPlayerManagement() {
 // direction +1 = demote
 // ============================================================
 
-async function changePlayerRank(player, direction) {
+async function changePlayerRank(
+    player,
+    direction
+) {
 
-    if (!isAdmin || !adminSessionCode) {
+    if (
+        !isAdmin ||
+        !adminSessionCode
+    ) {
         return;
     }
 
 
     const currentIndex =
-        RANKS.indexOf(player.rank);
+        RANKS.indexOf(
+            player.rank
+        );
 
 
     if (currentIndex === -1) {
@@ -664,7 +914,8 @@ async function changePlayerRank(player, direction) {
             {
                 player_id: player.id,
                 new_rank: newRank,
-                entered_code: adminSessionCode
+                entered_code:
+                    adminSessionCode
             }
         );
 
@@ -673,9 +924,11 @@ async function changePlayerRank(player, direction) {
 
         console.error(error);
 
+
         alert(
             "The rank could not be saved to Supabase."
         );
+
 
         return;
     }
@@ -687,34 +940,57 @@ async function changePlayerRank(player, direction) {
             "The rank could not be saved to Supabase."
         );
 
+
         return;
     }
 
 
-    player.rank = newRank;
+    player.rank =
+        newRank;
+
+
+    const selectedId =
+        playerSelect.value;
 
 
     populatePlayerSelector();
 
 
-    playerSelect.value =
-        String(player.id);
+    if (
+        selectedId &&
+        players.some(
+            p =>
+                String(p.id) ===
+                String(selectedId)
+        )
+    ) {
+        playerSelect.value =
+            selectedId;
+    }
 
 
-    playerName.textContent =
-        player.name;
+    if (
+        String(selectedId) ===
+        String(player.id)
+    ) {
 
-    playerRank.textContent =
-        player.rank;
-
-
-    setRankBadge(
-        playerRank,
-        player.rank
-    );
+        playerName.textContent =
+            player.name;
 
 
-    randomizeButton.disabled = false;
+        playerRank.textContent =
+            player.rank;
+
+
+        setRankBadge(
+            playerRank,
+            player.rank
+        );
+
+
+        randomizeButton.disabled =
+            false;
+    }
 
 
     renderPlayerManagement();
@@ -732,10 +1008,14 @@ async function changePlayerRank(player, direction) {
 // RANK DISPLAY
 // ============================================================
 
-function setRankBadge(element, rank) {
+function setRankBadge(
+    element,
+    rank
+) {
 
     element.textContent =
         rank;
+
 
     element.className =
         "rank-badge";
@@ -744,29 +1024,59 @@ function setRankBadge(element, rank) {
     switch (rank) {
 
         case "Great":
-            element.classList.add("great-text");
+
+            element.classList.add(
+                "great-text"
+            );
+
             break;
+
 
         case "Good":
-            element.classList.add("good-text");
+
+            element.classList.add(
+                "good-text"
+            );
+
             break;
+
 
         case "Mid":
-            element.classList.add("mid-text");
+
+            element.classList.add(
+                "mid-text"
+            );
+
             break;
+
 
         case "Alright":
-            element.classList.add("alright-text");
+
+            element.classList.add(
+                "alright-text"
+            );
+
             break;
 
+
         case "Eh":
-            element.classList.add("eh-text");
+
+            element.classList.add(
+                "eh-text"
+            );
+
             break;
     }
 }
 
 
-function getRankTextClass(rank) {
+// ============================================================
+// RANK TEXT CLASS
+// ============================================================
+
+function getRankTextClass(
+    rank
+) {
 
     switch (rank) {
 
@@ -804,17 +1114,24 @@ function setStatus(
     statusMessage.textContent =
         message;
 
+
     statusMessage.className =
         "status-message";
 
 
     if (error) {
-        statusMessage.classList.add("error");
+
+        statusMessage.classList.add(
+            "error"
+        );
     }
 
 
     if (success) {
-        statusMessage.classList.add("success");
+
+        statusMessage.classList.add(
+            "success"
+        );
     }
 }
 
