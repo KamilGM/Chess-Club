@@ -87,8 +87,8 @@ async function loadPlayers() {
         .order("name", { ascending: true });
 
     if (error) {
-        console.error(error);
-        setStatus("Could not load players from Supabase.", true);
+        console.error("SUPABASE ERROR:", error);
+        setStatus(`Supabase error: ${error.message}`, true);
         return;
     }
 
@@ -184,6 +184,18 @@ function getSelectedPlayer() {
 
 // ============================================================
 // MATCHMAKING
+//
+// 90% chance:
+// Pick someone from the SAME rank.
+//
+// 10% chance:
+// Pick someone one rank above OR below.
+//
+// If the 10% choice has nobody available,
+// fall back to the same rank.
+//
+// If there is nobody in the same rank,
+// use an adjacent rank.
 // ============================================================
 
 function getOpponentPool(selectedPlayer) {
@@ -195,201 +207,75 @@ function getOpponentPool(selectedPlayer) {
         return [];
     }
 
-    const rank = selectedPlayer.rank;
+    const selectedRankIndex = RANKS.indexOf(selectedPlayer.rank);
 
-    let preferredRanks = [];
-
-    switch (rank) {
-        case "Great":
-            preferredRanks = getGreatPreferences(availablePlayers);
-            break;
-
-        case "Good":
-            preferredRanks = getGoodPreferences(availablePlayers);
-            break;
-
-        case "Mid":
-            preferredRanks = getMidPreferences(availablePlayers);
-            break;
-
-        case "Alright":
-            preferredRanks = getAlrightPreferences(availablePlayers);
-            break;
-
-        case "Eh":
-            preferredRanks = getEhPreferences(availablePlayers);
-            break;
-
-        default:
-            return [];
+    if (selectedRankIndex === -1) {
+        return [];
     }
 
-    for (const rankChoice of preferredRanks) {
-        const pool = availablePlayers.filter(
-            player => player.rank === rankChoice
-        );
+    const sameRankPlayers = availablePlayers.filter(
+        player => player.rank === selectedPlayer.rank
+    );
 
-        if (pool.length > 0) {
-            return pool;
+    const higherRankPlayers =
+        selectedRankIndex > 0
+            ? availablePlayers.filter(
+                player => player.rank === RANKS[selectedRankIndex - 1]
+            )
+            : [];
+
+    const lowerRankPlayers =
+        selectedRankIndex < RANKS.length - 1
+            ? availablePlayers.filter(
+                player => player.rank === RANKS[selectedRankIndex + 1]
+            )
+            : [];
+
+
+    // ========================================================
+    // IF SOMEONE IS IN THE SAME RANK
+    // 90% SAME RANK
+    // 10% ADJACENT RANK
+    // ========================================================
+
+    if (sameRankPlayers.length > 0) {
+
+        // 90% chance of same rank
+        if (Math.random() < 0.9) {
+            return sameRankPlayers;
         }
+
+        // 10% chance of adjacent rank
+        const adjacentPlayers = [
+            ...higherRankPlayers,
+            ...lowerRankPlayers
+        ];
+
+        if (adjacentPlayers.length > 0) {
+            return adjacentPlayers;
+        }
+
+        // No adjacent player available
+        return sameRankPlayers;
     }
 
-    return [];
-}
 
+    // ========================================================
+    // NOBODY IN SAME RANK
+    //
+    // Pick from an adjacent rank.
+    // ========================================================
 
-// ============================================================
-// GREAT
-// Great -> Great
-// If no other Great -> Good
-// ============================================================
+    const adjacentPlayers = [
+        ...higherRankPlayers,
+        ...lowerRankPlayers
+    ];
 
-function getGreatPreferences(availablePlayers) {
-    const greatPlayers = availablePlayers.filter(
-        player => player.rank === "Great"
-    );
-
-    if (greatPlayers.length > 0) {
-        return ["Great", "Good"];
-    }
-
-    return ["Good"];
-}
-
-
-// ============================================================
-// GOOD
-// 50% Great
-// 50% Mid
-// ============================================================
-
-function getGoodPreferences(availablePlayers) {
-    const greatAvailable = availablePlayers.some(
-        player => player.rank === "Great"
-    );
-
-    const midAvailable = availablePlayers.some(
-        player => player.rank === "Mid"
-    );
-
-    const randomChoice = Math.random() < 0.5;
-
-    if (randomChoice) {
-        if (greatAvailable) {
-            return ["Great", "Mid"];
-        }
-
-        if (midAvailable) {
-            return ["Mid", "Great"];
-        }
-    } else {
-        if (midAvailable) {
-            return ["Mid", "Great"];
-        }
-
-        if (greatAvailable) {
-            return ["Great", "Mid"];
-        }
+    if (adjacentPlayers.length > 0) {
+        return adjacentPlayers;
     }
 
     return [];
-}
-
-
-// ============================================================
-// MID
-// 50% Good
-// 50% Alright
-// ============================================================
-
-function getMidPreferences(availablePlayers) {
-    const goodAvailable = availablePlayers.some(
-        player => player.rank === "Good"
-    );
-
-    const alrightAvailable = availablePlayers.some(
-        player => player.rank === "Alright"
-    );
-
-    const randomChoice = Math.random() < 0.5;
-
-    if (randomChoice) {
-        if (goodAvailable) {
-            return ["Good", "Alright"];
-        }
-
-        if (alrightAvailable) {
-            return ["Alright", "Good"];
-        }
-    } else {
-        if (alrightAvailable) {
-            return ["Alright", "Good"];
-        }
-
-        if (goodAvailable) {
-            return ["Good", "Alright"];
-        }
-    }
-
-    return [];
-}
-
-
-// ============================================================
-// ALRIGHT
-// 50% Mid
-// 50% Eh
-// ============================================================
-
-function getAlrightPreferences(availablePlayers) {
-    const midAvailable = availablePlayers.some(
-        player => player.rank === "Mid"
-    );
-
-    const ehAvailable = availablePlayers.some(
-        player => player.rank === "Eh"
-    );
-
-    const randomChoice = Math.random() < 0.5;
-
-    if (randomChoice) {
-        if (midAvailable) {
-            return ["Mid", "Eh"];
-        }
-
-        if (ehAvailable) {
-            return ["Eh", "Mid"];
-        }
-    } else {
-        if (ehAvailable) {
-            return ["Eh", "Mid"];
-        }
-
-        if (midAvailable) {
-            return ["Mid", "Eh"];
-        }
-    }
-
-    return [];
-}
-
-
-// ============================================================
-// EH
-// Eh -> Eh
-// If no other Eh -> Alright
-// ============================================================
-
-function getEhPreferences(availablePlayers) {
-    const ehPlayers = availablePlayers.filter(
-        player => player.rank === "Eh"
-    );
-
-    if (ehPlayers.length > 0) {
-        return ["Eh", "Alright"];
-    }
-
-    return ["Alright"];
 }
 
 
@@ -405,13 +291,21 @@ randomizeButton.addEventListener("click", async () => {
     }
 
     randomizeButton.disabled = true;
+
     setStatus("Finding an opponent...");
 
     opponentCard.classList.remove("selected");
 
+    opponentName.textContent = "Spinning...";
+    opponentRank.textContent = "—";
+    opponentRank.className = "rank-badge";
+
+
     const opponentPool = getOpponentPool(selectedPlayer);
 
+
     if (opponentPool.length === 0) {
+
         opponentName.textContent = "No opponent";
         opponentRank.textContent = "—";
         opponentRank.className = "rank-badge";
@@ -422,15 +316,21 @@ randomizeButton.addEventListener("click", async () => {
         );
 
         randomizeButton.disabled = false;
+
         return;
     }
 
+
+    // Spin through the possible opponents
     await animateRandomSelection(opponentPool);
 
+
+    // Choose the actual opponent
     const opponent =
         opponentPool[
             Math.floor(Math.random() * opponentPool.length)
         ];
+
 
     opponentName.textContent = opponent.name;
     opponentRank.textContent = opponent.rank;
@@ -439,34 +339,49 @@ randomizeButton.addEventListener("click", async () => {
 
     opponentCard.classList.add("selected");
 
+
     setStatus(
         `${selectedPlayer.name} has been matched!`,
         false,
         true
     );
 
+
     randomizeButton.disabled = false;
 });
 
 
 // ============================================================
-// RANDOM ANIMATION
+// SPINNING ANIMATION
+// Starts fast and gradually slows down.
 // ============================================================
 
 async function animateRandomSelection(pool) {
-    const animationTime = 850;
-    const intervalTime = 75;
 
-    const startTime = Date.now();
+    const totalSpins = 24;
 
-    while (Date.now() - startTime < animationTime) {
+    for (let i = 0; i < totalSpins; i++) {
+
         const randomPlayer =
             pool[Math.floor(Math.random() * pool.length)];
+
 
         opponentName.textContent = randomPlayer.name;
         opponentRank.textContent = randomPlayer.rank;
 
-        setRankBadge(opponentRank, randomPlayer.rank);
+        setRankBadge(
+            opponentRank,
+            randomPlayer.rank
+        );
+
+
+        // Starts fast
+        // Gradually slows down
+        const progress = i / totalSpins;
+
+        const intervalTime =
+            45 + Math.pow(progress, 3) * 250;
+
 
         await wait(intervalTime);
     }
@@ -478,6 +393,7 @@ async function animateRandomSelection(pool) {
 // ============================================================
 
 adminButton.addEventListener("click", () => {
+
     adminPanel.classList.remove("hidden");
 
     adminLoginArea.classList.remove("hidden");
@@ -489,6 +405,7 @@ adminButton.addEventListener("click", () => {
     isAdmin = false;
     adminSessionCode = "";
 
+
     window.scrollTo({
         top: adminPanel.offsetTop - 30,
         behavior: "smooth"
@@ -497,10 +414,12 @@ adminButton.addEventListener("click", () => {
 
 
 closeAdminButton.addEventListener("click", () => {
+
     adminPanel.classList.add("hidden");
 
     isAdmin = false;
     adminSessionCode = "";
+
     adminCode.value = "";
 });
 
@@ -512,9 +431,11 @@ closeAdminButton.addEventListener("click", () => {
 adminLoginButton.addEventListener("click", loginAsAdmin);
 
 adminCode.addEventListener("keydown", event => {
+
     if (event.key === "Enter") {
         loginAsAdmin();
     }
+
 });
 
 
@@ -523,16 +444,24 @@ adminCode.addEventListener("keydown", event => {
 // ============================================================
 
 async function loginAsAdmin() {
+
     const code = adminCode.value.trim();
 
+
     if (!/^\d{6}$/.test(code)) {
+
         adminLoginMessage.textContent =
             "Enter the 6-digit administrator code.";
+
         return;
     }
 
+
     adminLoginButton.disabled = true;
-    adminLoginMessage.textContent = "Checking code...";
+
+    adminLoginMessage.textContent =
+        "Checking code...";
+
 
     const { data, error } = await db.rpc(
         "verify_admin_code",
@@ -541,9 +470,12 @@ async function loginAsAdmin() {
         }
     );
 
+
     adminLoginButton.disabled = false;
 
+
     if (error) {
+
         console.error(error);
 
         adminLoginMessage.textContent =
@@ -552,20 +484,27 @@ async function loginAsAdmin() {
         return;
     }
 
+
     if (data !== true) {
+
         adminLoginMessage.textContent =
             "Incorrect administrator code.";
 
         return;
     }
 
+
     isAdmin = true;
+
     adminSessionCode = code;
 
+
     adminLoginArea.classList.add("hidden");
+
     adminControls.classList.remove("hidden");
 
     adminLoginMessage.textContent = "";
+
 
     renderPlayerManagement();
 }
@@ -576,57 +515,105 @@ async function loginAsAdmin() {
 // ============================================================
 
 function renderPlayerManagement() {
+
     playerManagement.innerHTML = "";
 
+
     const sortedPlayers = [...players].sort((a, b) => {
+
         const rankDifference =
-            RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+            RANKS.indexOf(a.rank) -
+            RANKS.indexOf(b.rank);
+
 
         if (rankDifference !== 0) {
             return rankDifference;
         }
 
+
         return a.name.localeCompare(b.name);
     });
 
+
     sortedPlayers.forEach(player => {
-        const row = document.createElement("div");
-        row.className = "management-row";
 
-        const name = document.createElement("div");
-        name.className = "management-name";
-        name.textContent = player.name;
+        const row =
+            document.createElement("div");
 
-        const rank = document.createElement("div");
-        rank.className = "management-rank";
-        rank.textContent = player.rank;
-        rank.classList.add(getRankTextClass(player.rank));
+        row.className =
+            "management-row";
 
-        const upButton = document.createElement("button");
-        upButton.className = "rank-button";
-        upButton.textContent = "↑";
 
-        const downButton = document.createElement("button");
-        downButton.className = "rank-button";
-        downButton.textContent = "↓";
+        const name =
+            document.createElement("div");
 
-        const rankIndex = RANKS.indexOf(player.rank);
+        name.className =
+            "management-name";
 
-        upButton.disabled = rankIndex === 0;
-        downButton.disabled = rankIndex === RANKS.length - 1;
+        name.textContent =
+            player.name;
+
+
+        const rank =
+            document.createElement("div");
+
+        rank.className =
+            "management-rank";
+
+        rank.textContent =
+            player.rank;
+
+        rank.classList.add(
+            getRankTextClass(player.rank)
+        );
+
+
+        const upButton =
+            document.createElement("button");
+
+        upButton.className =
+            "rank-button";
+
+        upButton.textContent =
+            "↑";
+
+
+        const downButton =
+            document.createElement("button");
+
+        downButton.className =
+            "rank-button";
+
+        downButton.textContent =
+            "↓";
+
+
+        const rankIndex =
+            RANKS.indexOf(player.rank);
+
+
+        upButton.disabled =
+            rankIndex === 0;
+
+        downButton.disabled =
+            rankIndex === RANKS.length - 1;
+
 
         upButton.addEventListener("click", () => {
             changePlayerRank(player, -1);
         });
 
+
         downButton.addEventListener("click", () => {
             changePlayerRank(player, 1);
         });
+
 
         row.appendChild(name);
         row.appendChild(rank);
         row.appendChild(upButton);
         row.appendChild(downButton);
+
 
         playerManagement.appendChild(row);
     });
@@ -640,64 +627,98 @@ function renderPlayerManagement() {
 // ============================================================
 
 async function changePlayerRank(player, direction) {
+
     if (!isAdmin || !adminSessionCode) {
         return;
     }
 
-    const currentIndex = RANKS.indexOf(player.rank);
+
+    const currentIndex =
+        RANKS.indexOf(player.rank);
+
 
     if (currentIndex === -1) {
         return;
     }
 
-    const newIndex = currentIndex + direction;
 
-    if (newIndex < 0 || newIndex >= RANKS.length) {
+    const newIndex =
+        currentIndex + direction;
+
+
+    if (
+        newIndex < 0 ||
+        newIndex >= RANKS.length
+    ) {
         return;
     }
 
-    const newRank = RANKS[newIndex];
 
-    const { data, error } = await db.rpc(
-        "change_player_rank",
-        {
-            player_id: player.id,
-            new_rank: newRank,
-            entered_code: adminSessionCode
-        }
-    );
+    const newRank =
+        RANKS[newIndex];
+
+
+    const { data, error } =
+        await db.rpc(
+            "change_player_rank",
+            {
+                player_id: player.id,
+                new_rank: newRank,
+                entered_code: adminSessionCode
+            }
+        );
+
 
     if (error) {
+
         console.error(error);
 
-        alert("The rank could not be saved to Supabase.");
+        alert(
+            "The rank could not be saved to Supabase."
+        );
 
         return;
     }
+
 
     if (data !== true) {
-        alert("The rank could not be saved to Supabase.");
+
+        alert(
+            "The rank could not be saved to Supabase."
+        );
 
         return;
     }
+
 
     player.rank = newRank;
 
+
     populatePlayerSelector();
 
-    playerSelect.value = String(player.id);
 
-    playerName.textContent = player.name;
-    playerRank.textContent = player.rank;
+    playerSelect.value =
+        String(player.id);
+
+
+    playerName.textContent =
+        player.name;
+
+    playerRank.textContent =
+        player.rank;
+
 
     setRankBadge(
         playerRank,
         player.rank
     );
 
+
     randomizeButton.disabled = false;
 
+
     renderPlayerManagement();
+
 
     setStatus(
         `${player.name} is now ${newRank}.`,
@@ -712,10 +733,16 @@ async function changePlayerRank(player, direction) {
 // ============================================================
 
 function setRankBadge(element, rank) {
-    element.textContent = rank;
-    element.className = "rank-badge";
+
+    element.textContent =
+        rank;
+
+    element.className =
+        "rank-badge";
+
 
     switch (rank) {
+
         case "Great":
             element.classList.add("great-text");
             break;
@@ -740,7 +767,9 @@ function setRankBadge(element, rank) {
 
 
 function getRankTextClass(rank) {
+
     switch (rank) {
+
         case "Great":
             return "great-text";
 
@@ -766,14 +795,23 @@ function getRankTextClass(rank) {
 // STATUS MESSAGE
 // ============================================================
 
-function setStatus(message, error = false, success = false) {
-    statusMessage.textContent = message;
+function setStatus(
+    message,
+    error = false,
+    success = false
+) {
 
-    statusMessage.className = "status-message";
+    statusMessage.textContent =
+        message;
+
+    statusMessage.className =
+        "status-message";
+
 
     if (error) {
         statusMessage.classList.add("error");
     }
+
 
     if (success) {
         statusMessage.classList.add("success");
@@ -786,7 +824,13 @@ function setStatus(message, error = false, success = false) {
 // ============================================================
 
 function wait(milliseconds) {
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
+
+    return new Promise(
+        resolve => {
+            setTimeout(
+                resolve,
+                milliseconds
+            );
+        }
+    );
 }
